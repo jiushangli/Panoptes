@@ -21,27 +21,39 @@ public class PromptManager
      */
     public String buildSystemPrompt(AnalysisMode mode)
     {
+        String langInstruction = "请使用中文回答。\n\n";
+        String prompt;
         switch (mode)
         {
             case AUTO:
-                return buildAutoPrompt();
+                prompt = buildAutoPrompt();
+                break;
             case IDOR:
-                return buildIdorPrompt();
+                prompt = buildIdorPrompt();
+                break;
             case PARAM_TAMPERING:
-                return buildParamTamperingPrompt();
+                prompt = buildParamTamperingPrompt();
+                break;
             case STATE_MACHINE:
-                return buildStateMachinePrompt();
+                prompt = buildStateMachinePrompt();
+                break;
             case RACE_CONDITION:
-                return buildRaceConditionPrompt();
+                prompt = buildRaceConditionPrompt();
+                break;
             case RATE_LIMIT:
-                return buildRateLimitPrompt();
+                prompt = buildRateLimitPrompt();
+                break;
             case AUTH:
-                return buildAuthPrompt();
+                prompt = buildAuthPrompt();
+                break;
             case FREE_EXPLORE:
-                return buildFreeExplorePrompt();
+                prompt = buildFreeExplorePrompt();
+                break;
             default:
-                return buildAutoPrompt();
+                prompt = buildAutoPrompt();
+                break;
         }
+        return langInstruction + prompt;
     }
 
     private String buildAutoPrompt()
