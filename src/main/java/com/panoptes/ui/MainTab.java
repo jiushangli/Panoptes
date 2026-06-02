@@ -1,15 +1,13 @@
 package com.panoptes.ui;
 
-import burp.api.montoya.core.ToolSource;
-
 import javax.swing.*;
 import java.awt.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Main result display tab for Panoptes.
- * Shows analysis results from the AI scan.
+ * Main result display for Panoptes.
+ * Shows analysis results from the AI scan with a clean, monospaced layout.
  */
 public class MainTab
 {
@@ -37,7 +35,7 @@ public class MainTab
         JScrollPane scrollPane = new JScrollPane(resultArea);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
-        // ── Clear button at bottom ──
+        // ── Bottom: Clear ──
         JButton clearButton = new JButton("Clear");
         clearButton.addActionListener(e -> resultArea.setText(""));
 
@@ -49,13 +47,13 @@ public class MainTab
         rootPanel.add(scrollPane, BorderLayout.CENTER);
         rootPanel.add(bottomPanel, BorderLayout.SOUTH);
 
-        // Welcome message
+        // Welcome
         appendResult("═══════════════════════════════════════════\n");
         appendResult("  Panoptes — AI Business Logic Auditor\n");
         appendResult("═══════════════════════════════════════════\n");
-        appendResult("  Right-click any HTTP request in Burp\n");
-        appendResult("  → Extensions → Panoptes → Send to Panoptes\n");
-        appendResult("  to analyze it for business logic vulnerabilities.\n");
+        appendResult("  Configure your API in the Configuration tab above.\n");
+        appendResult("  Then right-click any HTTP request → Extensions →\n");
+        appendResult("  Send to Panoptes → choose analysis mode.\n");
         appendResult("───────────────────────────────────────────\n");
     }
 

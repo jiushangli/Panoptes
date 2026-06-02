@@ -1,11 +1,15 @@
 package com.panoptes.ui;
 
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
-import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.logging.Logging;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
+import com.panoptes.model.AppConfig;
+import com.panoptes.service.AiService;
+import com.panoptes.service.OpenAiCompatService;
+import com.panoptes.service.PromptManager;
+import com.panoptes.service.RequestSanitizer;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,18 +17,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Right-click context menu provider for Panoptes.
- * Adds "Send to Panoptes" option when HTTP requests are selected.
+ * Right-click context menu with submenu support and AI analysis integration.
  */
 public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
 {
     private final MontoyaApi api;
+    private final Logging logging;
     private final MainTab mainTab;
+    private final PromptManager promptManager;
+    private final AiService aiService;
 
-    public AnalyzeContextMenuProvider(MontoyaApi api, MainTab mainTab)
+    public AnalyzeContextMenuProvider(MontoyaApi api, Logging logging, MainTab mainTab,
+                                      PromptManager promptManager, AiService aiService)
     {
         this.api = api;
+        this.logging = logging;
         this.mainTab = mainTab;
+        this.promptManager = promptManager;
+        this.aiService = aiService;
     }
 
     @Override
@@ -32,77 +42,131 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
     {
         List<Component> menuItems = new ArrayList<>();
 
-        // Only show menu when there are HTTP request/response pairs selected
         if (event.selectedRequestResponses().isEmpty())
         {
             return menuItems;
         }
 
-        JMenuItem sendToPanoptes = new JMenuItem("Send to Panoptes");
-        sendToPanoptes.setIcon(null);
+        // ── Main menu: "Send to Panoptes" ──
+        JMenu mainMenu = new JMenu("Send to Panoptes");
 
-        sendToPanoptes.addActionListener(e ->
-                analyzeInBackground(event.selectedRequestResponses()));
+        // 🎯 Precision Analysis submenu
+        JMenu precisionMenu = new JMenu("🎯 Precision Analysis");
 
-        menuItems.add(sendToPanoptes);
+        addModeItem(precisionMenu, PromptManager.AnalysisMode.AUTO, event);
+        precisionMenu.addSeparator();
+        addModeItem(precisionMenu, PromptManager.AnalysisMode.IDOR, event);
+        addModeItem(precisionMenu, PromptManager.AnalysisMode.PARAM_TAMPERING, event);
+        addModeItem(precisionMenu, PromptManager.AnalysisMode.STATE_MACHINE, event);
+        addModeItem(precisionMenu, PromptManager.AnalysisMode.RACE_CONDITION, event);
+        addModeItem(precisionMenu, PromptManager.AnalysisMode.RATE_LIMIT, event);
+        addModeItem(precisionMenu, PromptManager.AnalysisMode.AUTH, event);
+
+        // 🧠 Free Exploration submenu
+        JMenuItem freeExploreItem = new JMenuItem("🧠 Free Exploration");
+        freeExploreItem.addActionListener(e ->
+                analyze(event.selectedRequestResponses(), PromptManager.AnalysisMode.FREE_EXPLORE));
+
+        mainMenu.add(precisionMenu);
+        mainMenu.addSeparator();
+        mainMenu.add(freeExploreItem);
+
+        menuItems.add(mainMenu);
         return menuItems;
     }
 
+    private void addModeItem(JMenu parent, PromptManager.AnalysisMode mode, ContextMenuEvent event)
+    {
+        JMenuItem item = new JMenuItem(mode.getDisplayName());
+        item.addActionListener(e ->
+                analyze(event.selectedRequestResponses(), mode));
+        parent.add(item);
+    }
+
     /**
-     * Run analysis in a background thread to avoid blocking Burp's UI.
+     * Run analysis in a background thread.
      */
-    private void analyzeInBackground(List<HttpRequestResponse> requestResponses)
+    private void analyze(List<HttpRequestResponse> requestResponses, PromptManager.AnalysisMode mode)
     {
         new SwingWorker<Void, Void>()
         {
             @Override
             protected Void doInBackground()
             {
+                AppConfig config = AppConfig.load(api.persistence().extensionData());
+
+                if (!config.isValid())
+                {
+                    mainTab.appendResult("⚠ Configuration incomplete. Please set API Endpoint, Key, and Model in the Panoptes tab.\n\n");
+                    mainTab.setStatus("Config required");
+                    return null;
+                }
+
+                RequestSanitizer sanitizer = new RequestSanitizer(
+                        config.isSanitizeEnabled() ? config.getSanitizeExtraFields() : "");
+
+                String systemPrompt = promptManager.buildSystemPrompt(mode);
+
                 for (HttpRequestResponse requestResponse : requestResponses)
                 {
-                    analyzeRequest(requestResponse);
+                    analyzeSingle(requestResponse, config, sanitizer, systemPrompt, mode);
                 }
+
+                mainTab.setStatus("Ready");
                 return null;
             }
         }.execute();
     }
 
-    /**
-     * Analyze a single request/response pair.
-     * MVP version: just shows request details. AI analysis will be added later.
-     */
-    private void analyzeRequest(HttpRequestResponse requestResponse)
+    private void analyzeSingle(HttpRequestResponse requestResponse, AppConfig config,
+                                RequestSanitizer sanitizer, String systemPrompt,
+                                PromptManager.AnalysisMode mode)
     {
-        HttpRequest request = requestResponse.request();
-        String url = request.url();
-        String method = request.method();
-        String headers = String.join("\n", request.headers().stream()
-                .map(h -> h.name() + ": " + h.value())
-                .toList());
-        String body = request.body() != null ? request.body().toString() : "";
+        String url = requestResponse.request().url();
+        String method = requestResponse.request().method();
 
-        // Show "analyzing" status
-        mainTab.setStatus("Analyzing: " + method + " " + url);
-
-        // For MVP: just echo the request info (AI will replace this)
-        StringBuilder result = new StringBuilder();
-        result.append("───────────────────────────────────────────\n");
-        result.append("  [" + method + "] ").append(url).append("\n");
-        result.append("───────────────────────────────────────────\n");
-        result.append("  Headers:\n");
-        for (String h : request.headers().stream()
-                .map(hdr -> "    " + hdr.name() + ": " + hdr.value())
-                .toList())
+        try
         {
-            result.append(h).append("\n");
-        }
-        result.append("\n  Body:\n").append("    ").append(
-                body.isEmpty() ? "(empty)" : body.replace("\n", "\n    ")
-        ).append("\n\n");
-        result.append("  ⚡ AI analysis will be available in the next version.\n");
-        result.append("\n");
+            mainTab.setStatus("Analyzing: " + method + " " + url + " [" + mode.getDisplayName() + "]");
 
-        mainTab.appendResult(result.toString());
-        mainTab.setStatus("Ready");
+            // 1. Sanitize the request
+            RequestSanitizer.SanitizedRequest safe;
+            if (config.isSanitizeEnabled())
+            {
+                safe = sanitizer.sanitize(requestResponse.request());
+            }
+            else
+            {
+                // Bypass sanitization (use with caution!)
+                String raw = method + " " + url + "\n" +
+                        requestResponse.request().headers().stream()
+                                .map(h -> h.name() + ": " + h.value())
+                                .reduce((a, b) -> a + "\n" + b).orElse("") +
+                        (requestResponse.request().body() != null ?
+                                "\n\n" + requestResponse.request().body().toString() : "");
+                safe = new RequestSanitizer.SanitizedRequest(raw, url, method);
+            }
+
+            // 2. Call AI
+            String analysis = aiService.analyze(config, systemPrompt, safe.getSafeText());
+
+            // 3. Display result
+            StringBuilder result = new StringBuilder();
+            result.append("═══════════════════════════════════════════\n");
+            result.append("  [").append(mode.getDisplayName()).append("]\n");
+            result.append("  ").append(method).append(" ").append(url).append("\n");
+            result.append("═══════════════════════════════════════════\n");
+            result.append(analysis).append("\n\n");
+
+            mainTab.appendResult(result.toString());
+        }
+        catch (Exception e)
+        {
+            String errorMsg = "✗ Analysis failed for " + url + ": " + e.getMessage();
+            logging.logToError("[Panoptes] " + errorMsg);
+            mainTab.appendResult("═══════════════════════════════════════════\n");
+            mainTab.appendResult("  [ERROR] " + url + "\n");
+            mainTab.appendResult("  " + e.getMessage() + "\n\n");
+        }
     }
 }

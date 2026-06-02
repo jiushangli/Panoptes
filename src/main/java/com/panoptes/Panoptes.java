@@ -3,8 +3,14 @@ package com.panoptes;
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.logging.Logging;
-import com.panoptes.ui.MainTab;
+import com.panoptes.service.AiService;
+import com.panoptes.service.OpenAiCompatService;
+import com.panoptes.service.PromptManager;
 import com.panoptes.ui.AnalyzeContextMenuProvider;
+import com.panoptes.ui.ConfigPanel;
+import com.panoptes.ui.MainTab;
+
+import javax.swing.*;
 
 /**
  * Panoptes — AI-powered Burp Suite plugin for business logic vulnerability auditing.
@@ -14,37 +20,46 @@ import com.panoptes.ui.AnalyzeContextMenuProvider;
  */
 public class Panoptes implements BurpExtension
 {
-    private MontoyaApi api;
-    private MainTab mainTab;
-
     @Override
     public void initialize(MontoyaApi api)
     {
-        this.api = api;
-        Logging logging = api.logging();
-
-        // Set extension name shown in Burp's Extensions tab
         api.extension().setName("Panoptes - AI Business Logic Auditor");
+        Logging logging = api.logging();
 
         try
         {
-            // Create the main result display tab
-            mainTab = new MainTab();
+            // ── Core services ──
+            PromptManager promptManager = new PromptManager(logging);
+            AiService aiService = new OpenAiCompatService();
 
-            // Register the Panoptes tab in Burp's UI
-            api.userInterface().registerSuiteTab("Panoptes", mainTab.getUi());
+            // ── UI Components ──
+            MainTab mainTab = new MainTab();
+            ConfigPanel configPanel = new ConfigPanel(api, logging);
 
-            // Register the right-click context menu
+            // ── Tabbed pane: Results + Configuration ──
+            JTabbedPane tabbedPane = new JTabbedPane();
+            tabbedPane.addTab("Results", mainTab.getUi());
+            tabbedPane.addTab("Configuration", configPanel.getUi());
+
+            api.userInterface().registerSuiteTab("Panoptes", tabbedPane);
+
+            // ── Right-click menu ──
             api.userInterface().registerContextMenuItemsProvider(
-                    new AnalyzeContextMenuProvider(api, mainTab));
+                    new AnalyzeContextMenuProvider(api, logging, mainTab, promptManager, aiService));
 
-            logging.logToOutput("[Panoptes] v" + getClass().getPackage().getImplementationVersion() + " loaded ✓");
-            logging.logToOutput("[Panoptes] Right-click any HTTP request → Extensions → Panoptes → Send to Panoptes");
+            logging.logToOutput("[Panoptes] v" + getVersion() + " loaded ✓");
+            logging.logToOutput("[Panoptes] Go to Panoptes > Configuration to set up your API");
         }
         catch (Exception e)
         {
             logging.logToError("[Panoptes] Initialization failed: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private String getVersion()
+    {
+        String v = getClass().getPackage().getImplementationVersion();
+        return v != null ? v : "0.1.0";
     }
 }
