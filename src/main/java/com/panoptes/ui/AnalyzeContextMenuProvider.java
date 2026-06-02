@@ -131,9 +131,11 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
 
             // 1. Sanitize the request
             RequestSanitizer.SanitizedRequest safe;
+            String requestText;
             if (config.isSanitizeEnabled())
             {
                 safe = sanitizer.sanitize(requestResponse.request());
+                requestText = safe.getSafeText();
             }
             else
             {
@@ -144,11 +146,31 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
                                 .reduce((a, b) -> a + "\n" + b).orElse("") +
                         (requestResponse.request().body() != null ?
                                 "\n\n" + requestResponse.request().body().toString() : "");
+                requestText = raw;
                 safe = new RequestSanitizer.SanitizedRequest(raw, url, method);
             }
 
+            // Include response if available
+            String fullText = requestText;
+            if (requestResponse.response() != null)
+            {
+                int statusCode = requestResponse.response().statusCode();
+                String responseBody = requestResponse.response().body() != null
+                        ? requestResponse.response().body().toString() : "";
+                if (config.isSanitizeEnabled())
+                {
+                    fullText += sanitizer.sanitizeResponseText(statusCode, responseBody);
+                }
+                else
+                {
+                    fullText += "\n=== HTTP Response ===\n"
+                            + "Status: " + statusCode + "\n"
+                            + (responseBody.isEmpty() ? "" : "\n" + responseBody);
+                }
+            }
+
             // 2. Call AI
-            String analysis = aiService.analyze(config, systemPrompt, safe.getSafeText());
+            String analysis = aiService.analyze(config, systemPrompt, fullText);
 
             // 3. Display result
             StringBuilder result = new StringBuilder();
@@ -162,8 +184,8 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             // If debug mode is on, show the sanitized request after the analysis
             if (config.isShowSanitizedRequest())
             {
-                result.append("  ── 实际发送给 AI 的请求 ──\n");
-                result.append(safe.getSafeText()).append("\n");
+                result.append("  ── 实际发送给 AI 的内容 ──\n");
+                result.append(fullText).append("\n");
                 result.append("  ── 以上为 AI 收到的内容 ──\n");
             }
 

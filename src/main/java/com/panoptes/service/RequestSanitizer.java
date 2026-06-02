@@ -161,6 +161,24 @@ public class RequestSanitizer
     }
 
     /**
+     * Sanitize response headers and body (e.g. Set-Cookie in response).
+     */
+    public String sanitizeResponseText(int statusCode, String body)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n=== HTTP Response ===\n");
+        sb.append("Status: ").append(statusCode).append("\n");
+
+        // Sanitize response body (may contain tokens, etc.)
+        if (body != null && !body.isEmpty())
+        {
+            sb.append("\n").append(sanitizeBodyParameters(body));
+        }
+
+        return sb.toString();
+    }
+
+    /**
      * Result of sanitization.
      */
     public static class SanitizedRequest
