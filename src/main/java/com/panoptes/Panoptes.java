@@ -47,8 +47,8 @@ public class Panoptes implements BurpExtension
             api.userInterface().registerContextMenuItemsProvider(
                     new AnalyzeContextMenuProvider(api, logging, mainTab, promptManager, aiService));
 
-            logging.logToOutput("[Panoptes] v" + getVersion() + " loaded ✓");
-            logging.logToOutput("[Panoptes] Go to Panoptes > Configuration to set up your API");
+            logging.logToOutput("[Panoptes] v" + getVersion() + " 加载成功 ✓");
+            logging.logToOutput("[Panoptes] 请前往 Panoptes > Configuration 配置 API");
         }
         catch (Exception e)
         {

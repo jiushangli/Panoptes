@@ -47,11 +47,11 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             return menuItems;
         }
 
-        // ── Main menu: "Send to Panoptes" ──
-        JMenu mainMenu = new JMenu("Send to Panoptes");
+        // ── Main menu ──
+        JMenu mainMenu = new JMenu("发送到 Panoptes");
 
-        // 🎯 Precision Analysis submenu
-        JMenu precisionMenu = new JMenu("🎯 Precision Analysis");
+        // 🎯 精准分析 submenu
+        JMenu precisionMenu = new JMenu("🎯 精准分析");
 
         addModeItem(precisionMenu, PromptManager.AnalysisMode.AUTO, event);
         precisionMenu.addSeparator();
@@ -62,8 +62,8 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
         addModeItem(precisionMenu, PromptManager.AnalysisMode.RATE_LIMIT, event);
         addModeItem(precisionMenu, PromptManager.AnalysisMode.AUTH, event);
 
-        // 🧠 Free Exploration submenu
-        JMenuItem freeExploreItem = new JMenuItem("🧠 Free Exploration");
+        // 🧠 自由探索
+        JMenuItem freeExploreItem = new JMenuItem("🧠 自由探索");
         freeExploreItem.addActionListener(e ->
                 analyze(event.selectedRequestResponses(), PromptManager.AnalysisMode.FREE_EXPLORE));
 
@@ -97,8 +97,8 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
 
                 if (!config.isValid())
                 {
-                    mainTab.appendResult("⚠ Configuration incomplete. Please set API Endpoint, Key, and Model in the Panoptes tab.\n\n");
-                    mainTab.setStatus("Config required");
+                    mainTab.appendResult("⚠ 配置不完整。请在 Panoptes 标签页的 Configuration 中设置 API 地址、密钥和模型。\n\n");
+                    mainTab.setStatus("需要配置");
                     return null;
                 }
 
@@ -112,7 +112,7 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
                     analyzeSingle(requestResponse, config, sanitizer, systemPrompt, mode);
                 }
 
-                mainTab.setStatus("Ready");
+                mainTab.setStatus("分析完成");
                 return null;
             }
         }.execute();
@@ -127,7 +127,7 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
 
         try
         {
-            mainTab.setStatus("Analyzing: " + method + " " + url + " [" + mode.getDisplayName() + "]");
+            mainTab.setStatus("正在分析: " + method + " " + url + " [" + mode.getDisplayName() + "]");
 
             // 1. Sanitize the request
             RequestSanitizer.SanitizedRequest safe;
@@ -162,10 +162,10 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
         }
         catch (Exception e)
         {
-            String errorMsg = "✗ Analysis failed for " + url + ": " + e.getMessage();
+            String errorMsg = "✗ 分析失败 " + url + ": " + e.getMessage();
             logging.logToError("[Panoptes] " + errorMsg);
             mainTab.appendResult("═══════════════════════════════════════════\n");
-            mainTab.appendResult("  [ERROR] " + url + "\n");
+            mainTab.appendResult("  [错误] " + url + "\n");
             mainTab.appendResult("  " + e.getMessage() + "\n\n");
         }
     }

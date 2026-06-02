@@ -43,7 +43,7 @@ public class ConfigPanel
         int row = 0;
 
         // ── Title ──
-        JLabel title = new JLabel("Panoptes Configuration");
+        JLabel title = new JLabel("Panoptes 配置");
         title.setFont(new Font(title.getFont().getName(), Font.BOLD, 16));
         gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 3;
         rootPanel.add(title, gbc);
@@ -56,30 +56,30 @@ public class ConfigPanel
 
         // ── API Endpoint ──
         gbc.gridx = 0; gbc.gridy = row;
-        rootPanel.add(new JLabel("API Endpoint:"), gbc);
+        rootPanel.add(new JLabel("API 地址:"), gbc);
         gbc.gridx = 1; gbc.gridwidth = 2;
         endpointField = new JTextField(config.getEndpoint(), 40);
-        endpointField.setToolTipText("E.g. https://api.deepseek.com or https://api.openai.com");
+        endpointField.setToolTipText("例如 https://api.deepseek.com 或 https://api.openai.com");
         rootPanel.add(endpointField, gbc);
         gbc.gridwidth = 1;
         row++;
 
         // ── API Key ──
         gbc.gridx = 0; gbc.gridy = row;
-        rootPanel.add(new JLabel("API Key:"), gbc);
+        rootPanel.add(new JLabel("API 密钥:"), gbc);
         gbc.gridx = 1; gbc.gridwidth = 2;
         apiKeyField = new JPasswordField(config.getApiKey(), 40);
-        apiKeyField.setToolTipText("Your API key (stored locally, sent only to the configured endpoint)");
+        apiKeyField.setToolTipText("你的 API Key（仅本地存储，仅发送到配置的地址）");
         rootPanel.add(apiKeyField, gbc);
         gbc.gridwidth = 1;
         row++;
 
         // ── Model ──
         gbc.gridx = 0; gbc.gridy = row;
-        rootPanel.add(new JLabel("Model:"), gbc);
+        rootPanel.add(new JLabel("模型:"), gbc);
         gbc.gridx = 1; gbc.gridwidth = 2;
         modelField = new JTextField(config.getModel(), 40);
-        modelField.setToolTipText("E.g. deepseek-chat, gpt-4o, or your local model name");
+        modelField.setToolTipText("例如 deepseek-chat, gpt-4o, 或本地模型名");
         rootPanel.add(modelField, gbc);
         gbc.gridwidth = 1;
         row++;
@@ -91,17 +91,17 @@ public class ConfigPanel
 
         // ── Sanitization ──
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 3;
-        sanitizeCheckbox = new JCheckBox("Enable request sanitization (recommended)", config.isSanitizeEnabled());
-        sanitizeCheckbox.setToolTipText("Redacts cookies, tokens, and sensitive parameters before sending to AI");
+        sanitizeCheckbox = new JCheckBox("启用请求清洗（推荐）", config.isSanitizeEnabled());
+        sanitizeCheckbox.setToolTipText("发送给 AI 前自动脱敏 Cookie、Token 等敏感信息");
         rootPanel.add(sanitizeCheckbox, gbc);
         gbc.gridwidth = 1;
         row++;
 
         gbc.gridx = 0; gbc.gridy = row;
-        rootPanel.add(new JLabel("Extra fields to redact:"), gbc);
+        rootPanel.add(new JLabel("额外脱敏字段:"), gbc);
         gbc.gridx = 1; gbc.gridwidth = 2;
         extraFieldsField = new JTextField(config.getSanitizeExtraFields(), 40);
-        extraFieldsField.setToolTipText("Comma-separated: e.g. signature,nonce,private_key");
+        extraFieldsField.setToolTipText("逗号分隔，例如 signature,nonce,private_key");
         rootPanel.add(extraFieldsField, gbc);
         gbc.gridwidth = 1;
         row++;
@@ -109,11 +109,11 @@ public class ConfigPanel
         // ── Save Button ──
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 3;
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton saveButton = new JButton("Save Configuration");
+        JButton saveButton = new JButton("保存配置");
         saveButton.addActionListener(e -> saveConfig());
         buttonPanel.add(saveButton);
 
-        JButton testButton = new JButton("Test Connection");
+        JButton testButton = new JButton("测试连接");
         testButton.addActionListener(e -> testConnection());
         buttonPanel.add(testButton);
 
@@ -152,8 +152,8 @@ public class ConfigPanel
         config.save(api.persistence().extensionData());
 
         statusLabel.setForeground(new Color(0, 128, 0));
-        statusLabel.setText("✓ Configuration saved successfully");
-        logging.logToOutput("[Panoptes] Configuration saved");
+        statusLabel.setText("✅ 配置已保存");
+        logging.logToOutput("[Panoptes] 配置已保存");
     }
 
     private void testConnection()
@@ -164,12 +164,12 @@ public class ConfigPanel
         if (!config.isValid())
         {
             statusLabel.setForeground(Color.RED);
-            statusLabel.setText("✗ Please fill in all required fields (Endpoint, API Key, Model)");
+            statusLabel.setText("❌ 请填写所有必填项（API 地址、密钥、模型）");
             return;
         }
 
         statusLabel.setForeground(Color.BLUE);
-        statusLabel.setText("Testing connection...");
+        statusLabel.setText("正在测试连接...");
 
         // Test in background thread
         new SwingWorker<String, Void>()
@@ -207,12 +207,12 @@ public class ConfigPanel
                 {
                     if (response.isSuccessful())
                     {
-                        return "✓ Connection successful! API is reachable.";
+                        return "✅ 连接成功！API 可用。";
                     }
                     else
                     {
                         String errorBody = response.body() != null ? response.body().string() : "";
-                        return "✗ API returned " + response.code() + ": " + errorBody;
+                        return "❌ API 返回 " + response.code() + "：" + errorBody;
                     }
                 }
             }
@@ -223,7 +223,7 @@ public class ConfigPanel
                 try
                 {
                     String result = get();
-                    if (result.startsWith("✓"))
+                    if (result.startsWith("✅"))
                     {
                         statusLabel.setForeground(new Color(0, 128, 0));
                     }
@@ -236,7 +236,7 @@ public class ConfigPanel
                 catch (Exception e)
                 {
                     statusLabel.setForeground(Color.RED);
-                    statusLabel.setText("✗ Connection failed: " + e.getMessage());
+                    statusLabel.setText("❌ 连接失败：" + e.getMessage());
                 }
             }
         }.execute();

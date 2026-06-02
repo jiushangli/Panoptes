@@ -21,7 +21,7 @@ public class MainTab
 
         // ── Top: Status bar ──
         JPanel topPanel = new JPanel(new BorderLayout());
-        statusLabel = new JLabel("Ready. Right-click a request → Send to Panoptes");
+        statusLabel = new JLabel("就绪。右键请求 → 发送到 Panoptes 开始分析");
         statusLabel.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
         statusLabel.setOpaque(true);
         statusLabel.setBackground(new Color(245, 245, 250));
@@ -49,11 +49,11 @@ public class MainTab
 
         // Welcome
         appendResult("═══════════════════════════════════════════\n");
-        appendResult("  Panoptes — AI Business Logic Auditor\n");
+        appendResult("  Panoptes — AI 业务逻辑审计插件\n");
         appendResult("═══════════════════════════════════════════\n");
-        appendResult("  Configure your API in the Configuration tab above.\n");
-        appendResult("  Then right-click any HTTP request → Extensions →\n");
-        appendResult("  Send to Panoptes → choose analysis mode.\n");
+        appendResult("  请先在 Configuration 标签页配置 API 信息。\n");
+        appendResult("  然后右键任意 HTTP 请求 → Extensions →\n");
+        appendResult("  发送到 Panoptes → 选择分析模式。\n");
         appendResult("───────────────────────────────────────────\n");
     }
 
