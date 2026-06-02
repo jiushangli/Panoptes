@@ -19,6 +19,7 @@ public class ConfigPanel
     private final JTextField modelField;
     private final JCheckBox sanitizeCheckbox;
     private final JTextField extraFieldsField;
+    private final JCheckBox showRawCheckbox;
     private final JLabel statusLabel;
 
     private final MontoyaApi api;
@@ -106,6 +107,14 @@ public class ConfigPanel
         gbc.gridwidth = 1;
         row++;
 
+        // ── Show raw sanitized request ──
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 3;
+        showRawCheckbox = new JCheckBox("显示清洗后的请求内容（调试用）", config.isShowSanitizedRequest());
+        showRawCheckbox.setToolTipText("开启后，每次分析结果中会展示实际发送给 AI 的请求内容");
+        rootPanel.add(showRawCheckbox, gbc);
+        gbc.gridwidth = 1;
+        row++;
+
         // ── Save Button ──
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 3;
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -149,6 +158,7 @@ public class ConfigPanel
         config.setModel(modelField.getText().trim());
         config.setSanitizeEnabled(sanitizeCheckbox.isSelected());
         config.setSanitizeExtraFields(extraFieldsField.getText().trim());
+        config.setShowSanitizedRequest(showRawCheckbox.isSelected());
         config.save(api.persistence().extensionData());
 
         statusLabel.setForeground(new Color(0, 128, 0));

@@ -12,12 +12,14 @@ public class AppConfig
     private static final String KEY_MODEL    = "panoptes.model";
     private static final String KEY_SANITIZE = "panoptes.sanitizeEnabled";
     private static final String KEY_EXTRA    = "panoptes.sanitizeExtraFields";
+    private static final String KEY_SHOW_RAW = "panoptes.showSanitizedRequest";
 
     private String  endpoint;
     private String  apiKey;
     private String  model;
     private boolean sanitizeEnabled;
     private String  sanitizeExtraFields;
+    private boolean showSanitizedRequest;
 
     public static final String DEFAULT_ENDPOINT = "https://api.deepseek.com";
     public static final String DEFAULT_MODEL    = "deepseek-chat";
@@ -27,8 +29,9 @@ public class AppConfig
         this.endpoint        = DEFAULT_ENDPOINT;
         this.apiKey          = "";
         this.model           = DEFAULT_MODEL;
-        this.sanitizeEnabled = true;
-        this.sanitizeExtraFields = "";
+        this.sanitizeEnabled      = true;
+        this.sanitizeExtraFields   = "";
+        this.showSanitizedRequest  = false;
     }
 
     // ── Load from Burp persistent storage ──
@@ -46,6 +49,8 @@ public class AppConfig
             cfg.sanitizeEnabled = store.getBoolean(KEY_SANITIZE);
         if (store.getString(KEY_EXTRA) != null)
             cfg.sanitizeExtraFields = store.getString(KEY_EXTRA);
+        if (store.getBoolean(KEY_SHOW_RAW) != null)
+            cfg.showSanitizedRequest = store.getBoolean(KEY_SHOW_RAW);
         return cfg;
     }
 
@@ -58,6 +63,7 @@ public class AppConfig
         store.setString(KEY_MODEL, model);
         store.setBoolean(KEY_SANITIZE, sanitizeEnabled);
         store.setString(KEY_EXTRA, sanitizeExtraFields);
+        store.setBoolean(KEY_SHOW_RAW, showSanitizedRequest);
     }
 
     // ── Getters / Setters ──
@@ -76,6 +82,9 @@ public class AppConfig
 
     public String getSanitizeExtraFields() { return sanitizeExtraFields; }
     public void setSanitizeExtraFields(String sanitizeExtraFields) { this.sanitizeExtraFields = sanitizeExtraFields; }
+
+    public boolean isShowSanitizedRequest() { return showSanitizedRequest; }
+    public void setShowSanitizedRequest(boolean showSanitizedRequest) { this.showSanitizedRequest = showSanitizedRequest; }
 
     public boolean isValid()
     {

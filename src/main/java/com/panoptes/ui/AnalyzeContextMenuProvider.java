@@ -156,6 +156,15 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             result.append("  [").append(mode.getDisplayName()).append("]\n");
             result.append("  ").append(method).append(" ").append(url).append("\n");
             result.append("═══════════════════════════════════════════\n");
+
+            // If debug mode is on, show the sanitized request
+            if (config.isShowSanitizedRequest())
+            {
+                result.append("  ── 实际发送给 AI 的内容 ──\n");
+                result.append(safe.getSafeText()).append("\n");
+                result.append("  ── 以上为 AI 收到的请求 ──\n\n");
+            }
+
             result.append(analysis).append("\n\n");
 
             mainTab.appendResult(result.toString());
