@@ -1,0 +1,44 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.panoptes'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Burp Suite Montoya API
+    implementation 'net.portswigger.burp.extensions:montoya-api:2024.12'
+
+    // JSON processing
+    implementation 'com.google.code.gson:gson:2.11.0'
+
+    // HTTP client for future LLM API calls
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+// Bundle dependencies into a fat JAR for easy Burp loading
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    manifest {
+        attributes(
+                'Implementation-Title': 'Panoptes',
+                'Implementation-Version': archiveVersion
+        )
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
