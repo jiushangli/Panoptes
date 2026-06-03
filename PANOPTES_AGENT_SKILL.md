@@ -29,14 +29,10 @@ Panoptes (BurpExtension 入口)
 
 | 模式 | 枚举值 | 说明 |
 |------|--------|------|
-| 🎯 自动识别 | AUTO | AI 自主检查全部 6 个维度 |
-| IDOR / 越权 | IDOR | 不安全的直接对象引用 |
-| 参数篡改 | PARAM_TAMPERING | 价格、数量、状态值篡改 |
-| 状态机绕过 | STATE_MACHINE | 流程跳过、状态回退 |
-| 竞态条件 | RACE_CONDITION | 并发请求漏洞 |
-| 批量 / 频率控制 | RATE_LIMIT | 遍历、批量操作 |
-| 认证 / 会话 | AUTH | 认证和会话管理问题 |
+| 🎯 自动分析 | AUTO | 开放式分析，不预设漏洞维度，由 AI 自主发现 |
 | 🧠 自由探索 | FREE_EXPLORE | 不受约束的创造性分析 |
+
+> 原有的 6 个专项模式（IDOR、参数篡改等）已移除，改为让 AI 自主发现漏洞模式。知识库系统将在后续迭代中加入。
 
 ## 数据流
 
@@ -78,9 +74,12 @@ AnalyzeContextMenuProvider.analyzeSingle()
 
 ## 常见开发任务
 
+### 修改 Prompt
+编辑 `PromptManager.buildAutoPrompt()` 或 `buildFreeExplorePrompt()`
+
 ### 新增分析模式
 1. 在 `PromptManager.AnalysisMode` 添加枚举值
-2. 在 `PromptManager` 中添加对应 Prompt 方法（如 `buildNewModePrompt()`）
+2. 在 `PromptManager` 中添加对应 Prompt 方法
 3. 更新 `buildSystemPrompt()` 的 switch 分支
 4. 在 `AnalyzeContextMenuProvider.provideMenuItems()` 添加菜单项
 

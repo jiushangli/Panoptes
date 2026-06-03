@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Right-click context menu with submenu support and AI analysis integration.
+ * 右键菜单 — 发送到 Panoptes 分析。
  */
 public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
 {
@@ -47,44 +47,25 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             return menuItems;
         }
 
-        // ── Main menu ──
         JMenu mainMenu = new JMenu("发送到 Panoptes");
 
-        // 🎯 精准分析 submenu
-        JMenu precisionMenu = new JMenu("🎯 精准分析");
+        JMenuItem autoItem = new JMenuItem("🎯 自动分析");
+        autoItem.addActionListener(e ->
+                analyze(event.selectedRequestResponses(), PromptManager.AnalysisMode.AUTO));
 
-        addModeItem(precisionMenu, PromptManager.AnalysisMode.AUTO, event);
-        precisionMenu.addSeparator();
-        addModeItem(precisionMenu, PromptManager.AnalysisMode.IDOR, event);
-        addModeItem(precisionMenu, PromptManager.AnalysisMode.PARAM_TAMPERING, event);
-        addModeItem(precisionMenu, PromptManager.AnalysisMode.STATE_MACHINE, event);
-        addModeItem(precisionMenu, PromptManager.AnalysisMode.RACE_CONDITION, event);
-        addModeItem(precisionMenu, PromptManager.AnalysisMode.RATE_LIMIT, event);
-        addModeItem(precisionMenu, PromptManager.AnalysisMode.AUTH, event);
-
-        // 🧠 自由探索
-        JMenuItem freeExploreItem = new JMenuItem("🧠 自由探索");
-        freeExploreItem.addActionListener(e ->
+        JMenuItem exploreItem = new JMenuItem("🧠 自由探索");
+        exploreItem.addActionListener(e ->
                 analyze(event.selectedRequestResponses(), PromptManager.AnalysisMode.FREE_EXPLORE));
 
-        mainMenu.add(precisionMenu);
-        mainMenu.addSeparator();
-        mainMenu.add(freeExploreItem);
+        mainMenu.add(autoItem);
+        mainMenu.add(exploreItem);
 
         menuItems.add(mainMenu);
         return menuItems;
     }
 
-    private void addModeItem(JMenu parent, PromptManager.AnalysisMode mode, ContextMenuEvent event)
-    {
-        JMenuItem item = new JMenuItem(mode.getDisplayName());
-        item.addActionListener(e ->
-                analyze(event.selectedRequestResponses(), mode));
-        parent.add(item);
-    }
-
     /**
-     * Run analysis in a background thread.
+     * 在后台线程中执行分析。
      */
     private void analyze(List<HttpRequestResponse> requestResponses, PromptManager.AnalysisMode mode)
     {
@@ -129,7 +110,7 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
         {
             mainTab.setStatus("正在分析: " + method + " " + url + " [" + mode.getDisplayName() + "]");
 
-            // 1. Sanitize the request
+            // 1. 清洗请求
             RequestSanitizer.SanitizedRequest safe;
             String requestText;
             if (config.isSanitizeEnabled())
@@ -139,7 +120,6 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             }
             else
             {
-                // Bypass sanitization (use with caution!)
                 String raw = method + " " + url + "\n" +
                         requestResponse.request().headers().stream()
                                 .map(h -> h.name() + ": " + h.value())
@@ -150,7 +130,7 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
                 safe = new RequestSanitizer.SanitizedRequest(raw, url, method);
             }
 
-            // Include response if available
+            // 2. 拼接响应
             String fullText = requestText;
             if (requestResponse.response() != null)
             {
@@ -169,10 +149,10 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
                 }
             }
 
-            // 2. Call AI
+            // 3. 调用 AI
             String analysis = aiService.analyze(config, systemPrompt, fullText);
 
-            // 3. Display result
+            // 4. 展示结果
             StringBuilder result = new StringBuilder();
             result.append("═══════════════════════════════════════════\n");
             result.append("  [").append(mode.getDisplayName()).append("]\n");
@@ -181,7 +161,7 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
 
             result.append(analysis).append("\n");
 
-            // If debug mode is on, show the sanitized request after the analysis
+            // 调试模式：展示实际发送给 AI 的内容
             if (config.isShowSanitizedRequest())
             {
                 result.append("  ── 实际发送给 AI 的内容 ──\n");
