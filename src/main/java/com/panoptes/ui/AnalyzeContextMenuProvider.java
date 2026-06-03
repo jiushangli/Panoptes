@@ -14,6 +14,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 右键菜单 — 发送到 Panoptes 分析。
@@ -25,6 +26,8 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
     private final MainTab mainTab;
     private final PromptManager promptManager;
     private final AiService aiService;
+    private static final Pattern THINK_TAG_PATTERN = Pattern.compile(
+            "<think>.*?</think>", Pattern.DOTALL);
 
     public AnalyzeContextMenuProvider(MontoyaApi api, Logging logging, MainTab mainTab,
                                       PromptManager promptManager, AiService aiService)
@@ -133,6 +136,7 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
 
             // 3. 调用 AI
             String analysis = aiService.analyze(config, systemPrompt, fullText);
+            analysis = stripThinkTags(analysis);
 
             // 4. 展示结果
             StringBuilder result = new StringBuilder();
@@ -160,5 +164,14 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             mainTab.appendResult("  [错误] " + url + "\n");
             mainTab.appendResult("  " + e.getMessage() + "\n\n");
         }
+    }
+
+    /**
+     * 剥离 <think> 标签及其内容，只保留最终输出结果。
+     */
+    private static String stripThinkTags(String text)
+    {
+        if (text == null) return "";
+        return THINK_TAG_PATTERN.matcher(text).replaceAll("").trim();
     }
 }
