@@ -25,14 +25,15 @@ Panoptes (BurpExtension 入口)
 
 ## 分析模式
 
-所有 Prompt 均为中文。右键菜单可选：
+所有 Prompt 均为中文。右键菜单只有一个选项：发送到 Panoptes 分析。
 
-| 模式 | 枚举值 | 说明 |
-|------|--------|------|
-| 🎯 自动分析 | AUTO | 开放式分析，不预设漏洞维度，由 AI 自主发现 |
-| 🧠 自由探索 | FREE_EXPLORE | 不受约束的创造性分析 |
+单一分析模式，合并了传统检查与创造性探索：
 
-> 原有的 6 个专项模式（IDOR、参数篡改等）已移除，改为让 AI 自主发现漏洞模式。知识库系统将在后续迭代中加入。
+- 不预设漏洞分类，从请求和响应实际情况出发
+- 结合开发者假设逆向思考
+- 支持结构化输出（严重级别、目标、描述、复现、修复）
+
+> 知识库系统将在后续迭代中加入，用于积累发现的漏洞模式。
 
 ## 数据流
 
@@ -75,13 +76,7 @@ AnalyzeContextMenuProvider.analyzeSingle()
 ## 常见开发任务
 
 ### 修改 Prompt
-编辑 `PromptManager.buildAutoPrompt()` 或 `buildFreeExplorePrompt()`
-
-### 新增分析模式
-1. 在 `PromptManager.AnalysisMode` 添加枚举值
-2. 在 `PromptManager` 中添加对应 Prompt 方法
-3. 更新 `buildSystemPrompt()` 的 switch 分支
-4. 在 `AnalyzeContextMenuProvider.provideMenuItems()` 添加菜单项
+编辑 `PromptManager.buildSystemPrompt()`
 
 ### 新增内置脱敏规则
 编辑 `RequestSanitizer.SENSITIVE_HEADERS` 或 `SENSITIVE_PARAM_NAMES`

@@ -7,7 +7,6 @@ import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 import com.panoptes.model.AppConfig;
 import com.panoptes.service.AiService;
-import com.panoptes.service.OpenAiCompatService;
 import com.panoptes.service.PromptManager;
 import com.panoptes.service.RequestSanitizer;
 
@@ -47,27 +46,15 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             return menuItems;
         }
 
-        JMenu mainMenu = new JMenu("发送到 Panoptes");
+        JMenuItem sendItem = new JMenuItem("发送到 Panoptes 分析");
+        sendItem.addActionListener(e ->
+                analyze(event.selectedRequestResponses()));
 
-        JMenuItem autoItem = new JMenuItem("🎯 自动分析");
-        autoItem.addActionListener(e ->
-                analyze(event.selectedRequestResponses(), PromptManager.AnalysisMode.AUTO));
-
-        JMenuItem exploreItem = new JMenuItem("🧠 自由探索");
-        exploreItem.addActionListener(e ->
-                analyze(event.selectedRequestResponses(), PromptManager.AnalysisMode.FREE_EXPLORE));
-
-        mainMenu.add(autoItem);
-        mainMenu.add(exploreItem);
-
-        menuItems.add(mainMenu);
+        menuItems.add(sendItem);
         return menuItems;
     }
 
-    /**
-     * 在后台线程中执行分析。
-     */
-    private void analyze(List<HttpRequestResponse> requestResponses, PromptManager.AnalysisMode mode)
+    private void analyze(List<HttpRequestResponse> requestResponses)
     {
         new SwingWorker<Void, Void>()
         {
@@ -86,11 +73,11 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
                 RequestSanitizer sanitizer = new RequestSanitizer(
                         config.isSanitizeEnabled() ? config.getSanitizeExtraFields() : "");
 
-                String systemPrompt = promptManager.buildSystemPrompt(mode);
+                String systemPrompt = promptManager.buildSystemPrompt();
 
                 for (HttpRequestResponse requestResponse : requestResponses)
                 {
-                    analyzeSingle(requestResponse, config, sanitizer, systemPrompt, mode);
+                    analyzeSingle(requestResponse, config, sanitizer, systemPrompt);
                 }
 
                 mainTab.setStatus("分析完成");
@@ -100,34 +87,29 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
     }
 
     private void analyzeSingle(HttpRequestResponse requestResponse, AppConfig config,
-                                RequestSanitizer sanitizer, String systemPrompt,
-                                PromptManager.AnalysisMode mode)
+                                RequestSanitizer sanitizer, String systemPrompt)
     {
         String url = requestResponse.request().url();
         String method = requestResponse.request().method();
 
         try
         {
-            mainTab.setStatus("正在分析: " + method + " " + url + " [" + mode.getDisplayName() + "]");
+            mainTab.setStatus("正在分析: " + method + " " + url);
 
             // 1. 清洗请求
-            RequestSanitizer.SanitizedRequest safe;
             String requestText;
             if (config.isSanitizeEnabled())
             {
-                safe = sanitizer.sanitize(requestResponse.request());
-                requestText = safe.getSafeText();
+                requestText = sanitizer.sanitize(requestResponse.request()).getSafeText();
             }
             else
             {
-                String raw = method + " " + url + "\n" +
+                requestText = method + " " + url + "\n" +
                         requestResponse.request().headers().stream()
                                 .map(h -> h.name() + ": " + h.value())
                                 .reduce((a, b) -> a + "\n" + b).orElse("") +
                         (requestResponse.request().body() != null ?
                                 "\n\n" + requestResponse.request().body().toString() : "");
-                requestText = raw;
-                safe = new RequestSanitizer.SanitizedRequest(raw, url, method);
             }
 
             // 2. 拼接响应
@@ -155,13 +137,11 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             // 4. 展示结果
             StringBuilder result = new StringBuilder();
             result.append("═══════════════════════════════════════════\n");
-            result.append("  [").append(mode.getDisplayName()).append("]\n");
             result.append("  ").append(method).append(" ").append(url).append("\n");
             result.append("═══════════════════════════════════════════\n");
-
             result.append(analysis).append("\n");
 
-            // 调试模式：展示实际发送给 AI 的内容
+            // 调试模式
             if (config.isShowSanitizedRequest())
             {
                 result.append("  ── 实际发送给 AI 的内容 ──\n");
@@ -170,7 +150,6 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             }
 
             result.append("\n");
-
             mainTab.appendResult(result.toString());
         }
         catch (Exception e)
