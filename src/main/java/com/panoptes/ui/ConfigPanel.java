@@ -3,13 +3,14 @@ package com.panoptes.ui;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.logging.Logging;
 import com.panoptes.model.AppConfig;
+import com.panoptes.service.KnowledgeBaseService;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 /**
- * Configuration panel for the Panoptes tab.
- * Allows users to set API endpoint, key, model, and sanitization options.
+ * 配置面板 — API 设置 + SRC 知识库选择。
  */
 public class ConfigPanel
 {
@@ -20,19 +21,20 @@ public class ConfigPanel
     private final JCheckBox sanitizeCheckbox;
     private final JTextField extraFieldsField;
     private final JCheckBox showRawCheckbox;
+    private final JComboBox<String> srcComboBox;
     private final JLabel statusLabel;
 
     private final MontoyaApi api;
     private final Logging logging;
     private final AppConfig config;
+    private final KnowledgeBaseService kbService;
 
-    public ConfigPanel(MontoyaApi api, Logging logging)
+    public ConfigPanel(MontoyaApi api, Logging logging, KnowledgeBaseService kbService)
     {
         this.api = api;
         this.logging = logging;
-
-        // Load persisted config
         this.config = AppConfig.load(api.persistence().extensionData());
+        this.kbService = kbService;
 
         // ── Build UI ──
         rootPanel = new JPanel(new GridBagLayout());
@@ -82,6 +84,33 @@ public class ConfigPanel
         modelField = new JTextField(config.getModel(), 40);
         modelField.setToolTipText("例如 deepseek-chat, gpt-4o, 或本地模型名");
         rootPanel.add(modelField, gbc);
+        gbc.gridwidth = 1;
+        row++;
+
+        // ── Separator ──
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 3;
+        rootPanel.add(new JSeparator(), gbc);
+        gbc.gridwidth = 1;
+
+        // ── SRC Knowledge Base ──
+        List<String> srcList = kbService.listAvailableSrcs();
+        String activeSrc = kbService.getActiveSrc();
+
+        gbc.gridx = 0; gbc.gridy = row;
+        rootPanel.add(new JLabel("当前 SRC 规则:"), gbc);
+        gbc.gridx = 1; gbc.gridwidth = 2;
+        srcComboBox = new JComboBox<>(srcList.toArray(new String[0]));
+        srcComboBox.setSelectedItem(activeSrc);
+        srcComboBox.setToolTipText("选择当前挖掘的 SRC，分析时 AI 会参考对应的漏洞规则");
+        rootPanel.add(srcComboBox, gbc);
+        gbc.gridwidth = 1;
+        row++;
+
+        JLabel srcHint = new JLabel("在 knowledge/ 目录下添加 .md 文件来管理更多 SRC 规则");
+        srcHint.setFont(new Font(srcHint.getFont().getName(), Font.PLAIN, 11));
+        srcHint.setForeground(Color.GRAY);
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 3;
+        rootPanel.add(srcHint, gbc);
         gbc.gridwidth = 1;
         row++;
 
@@ -146,11 +175,6 @@ public class ConfigPanel
         return rootPanel;
     }
 
-    public AppConfig getConfig()
-    {
-        return config;
-    }
-
     private void saveConfig()
     {
         config.setEndpoint(endpointField.getText().trim());
@@ -161,14 +185,17 @@ public class ConfigPanel
         config.setShowSanitizedRequest(showRawCheckbox.isSelected());
         config.save(api.persistence().extensionData());
 
+        // Save SRC selection to knowledge/config.json
+        String selectedSrc = (String) srcComboBox.getSelectedItem();
+        kbService.setActiveSrc(selectedSrc);
+
         statusLabel.setForeground(new Color(0, 128, 0));
-        statusLabel.setText("✅ 配置已保存");
-        logging.logToOutput("[Panoptes] 配置已保存");
+        statusLabel.setText("✅ 配置已保存（SRC 规则: " + selectedSrc + "）");
+        logging.logToOutput("[Panoptes] 配置已保存，SRC: " + selectedSrc);
     }
 
     private void testConnection()
     {
-        // Save first
         saveConfig();
 
         if (!config.isValid())
@@ -181,13 +208,11 @@ public class ConfigPanel
         statusLabel.setForeground(Color.BLUE);
         statusLabel.setText("正在测试连接...");
 
-        // Test in background thread
         new SwingWorker<String, Void>()
         {
             @Override
             protected String doInBackground() throws Exception
             {
-                // Simple test: send a minimal request to the API
                 okhttp3.OkHttpClient client = new okhttp3.OkHttpClient.Builder()
                         .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                         .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)

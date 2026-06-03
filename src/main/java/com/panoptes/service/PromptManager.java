@@ -18,8 +18,24 @@ public class PromptManager
 
     /**
      * 构建 System Prompt（DeepSeek 优化版）。
+     *
+     * @param knowledgeContent 当前 SRC 规则内容，为空则不注入
      */
-    public String buildSystemPrompt()
+    public String buildSystemPrompt(String knowledgeContent)
+    {
+        String prompt = getBasePrompt();
+
+        if (knowledgeContent != null && !knowledgeContent.isBlank())
+        {
+            prompt += "\n\n=== 参考 SRC 漏洞规则 ===\n\n"
+                    + "以下是当前 SRC 的漏洞收录规则，请参考这些规则来判断发现的漏洞是否符合该 SRC 的收录标准：\n\n"
+                    + knowledgeContent;
+        }
+
+        return prompt;
+    }
+
+    private String getBasePrompt()
     {
         return """
 你是一位资深的业务逻辑漏洞挖掘专家。

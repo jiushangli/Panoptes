@@ -7,6 +7,7 @@ import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 import com.panoptes.model.AppConfig;
 import com.panoptes.service.AiService;
+import com.panoptes.service.KnowledgeBaseService;
 import com.panoptes.service.PromptManager;
 import com.panoptes.service.RequestSanitizer;
 
@@ -26,17 +27,20 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
     private final MainTab mainTab;
     private final PromptManager promptManager;
     private final AiService aiService;
+    private final KnowledgeBaseService kbService;
     private static final Pattern THINK_TAG_PATTERN = Pattern.compile(
             "<think>.*?</think>", Pattern.DOTALL);
 
     public AnalyzeContextMenuProvider(MontoyaApi api, Logging logging, MainTab mainTab,
-                                      PromptManager promptManager, AiService aiService)
+                                      PromptManager promptManager, AiService aiService,
+                                      KnowledgeBaseService kbService)
     {
         this.api = api;
         this.logging = logging;
         this.mainTab = mainTab;
         this.promptManager = promptManager;
         this.aiService = aiService;
+        this.kbService = kbService;
     }
 
     @Override
@@ -76,11 +80,14 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
                 RequestSanitizer sanitizer = new RequestSanitizer(
                         config.isSanitizeEnabled() ? config.getSanitizeExtraFields() : "");
 
-                String systemPrompt = promptManager.buildSystemPrompt();
+                // 加载当前 SRC 规则
+                String kbContent = kbService.getActiveSrcContent();
+                String srcName = kbService.getActiveSrc();
+                String systemPrompt = promptManager.buildSystemPrompt(kbContent);
 
                 for (HttpRequestResponse requestResponse : requestResponses)
                 {
-                    analyzeSingle(requestResponse, config, sanitizer, systemPrompt);
+                    analyzeSingle(requestResponse, config, sanitizer, systemPrompt, srcName);
                 }
 
                 mainTab.setStatus("分析完成");
@@ -90,7 +97,8 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
     }
 
     private void analyzeSingle(HttpRequestResponse requestResponse, AppConfig config,
-                                RequestSanitizer sanitizer, String systemPrompt)
+                                RequestSanitizer sanitizer, String systemPrompt,
+                                String srcName)
     {
         String url = requestResponse.request().url();
         String method = requestResponse.request().method();
@@ -142,6 +150,7 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
             StringBuilder result = new StringBuilder();
             result.append("═══════════════════════════════════════════\n");
             result.append("  ").append(method).append(" ").append(url).append("\n");
+            result.append("  SRC 规则: ").append(srcName).append("\n");
             result.append("═══════════════════════════════════════════\n");
             result.append(analysis).append("\n");
 
@@ -166,9 +175,6 @@ public class AnalyzeContextMenuProvider implements ContextMenuItemsProvider
         }
     }
 
-    /**
-     * 剥离 <think> 标签及其内容，只保留最终输出结果。
-     */
     private static String stripThinkTags(String text)
     {
         if (text == null) return "";

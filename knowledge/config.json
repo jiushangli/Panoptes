@@ -1,0 +1,4 @@
+{
+  "activeSrc": "通用",
+  "description": "在此配置当前使用的 SRC 名称。knowledge/ 目录下每个 .md 文件代表一个 SRC 的漏洞规则。"
+}
